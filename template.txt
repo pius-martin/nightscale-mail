@@ -2,14 +2,11 @@ Mehr Umsatz für {firmenname} durch KI
 
 Sehr geehrtes {firmenname}-Team,
 
-mein Name ist Pius Martin, Mitgründer von **Nightscale**. Wir sind ein in Wien und Vorarlberg ansässiges **KI-Unternehmen für die Gastronomie** und helfen Betrieben dabei, **Umsatz zu steigern, Personalkosten zu senken** und im Tagesgeschäft genauer zu verstehen, was tatsächlich passiert – Auslastung, Marge, Personalbedarf und saisonale Muster an einem Ort statt verteilt über fünf Tools.
+mein Name ist Pius Martin, Mitgründer von **Nightscale**. Wir sind ein in Wien und Vorarlberg ansässiges **KI-Unternehmen für die Gastronomie** und helfen Betrieben dabei, **Umsatz zu steigern, Personalkosten zu senken** und im Tagesgeschäft genauer zu verstehen, was tatsächlich passiert – Auslastung, Marge, Personalbedarf und saisonale Muster an einem Ort statt verteilt über fünf Tools und ohne KI Verständnis.
 
-Wir binden gerade die nächste Runde an Partnerbetrieben in unser System ein und würden Sie als {firmenname} gerne dazu holen.
+Wir haben gerade **APRO als POS** in unser System implementiert und dabei direkt an {firmenname} gedacht. Wir würden Sie gerne in die nächste Runde an Partnerbetrieben aufnehmen.
 
-Hätten Sie 15–20 Minuten für einen kurzen **Call oder einen Kaffee** bei Ihnen vor Ort? Wir zeigen Ihnen, wie Nightscale AI funktioniert.
-
-Anbei auch noch unsere Website für mehr Infos:
-https://www.nightscale.ai/
+Hätten Sie 20–30 Minuten für einen kurzen **Call oder einen Kaffee** bei Ihnen vor Ort? Wir zeigen Ihnen, wie Nightscale für vergleichbare Häuser bereits funktioniert.
 
 Beste Grüße
 Pius Martin
@@ -20,3 +17,4 @@ CO-FOUNDER · MARKETING & SALES
 NIGHT SCALE — ALL IN ONE NIGHTCLUB APP SOLUTION
 CALL: +43 680 15 252 54
 MAIL: PIUS@NIGHTSCALE.AT
+WEB: NIGHTSCALE.AI
