@@ -100,15 +100,24 @@ def get_access_token(client_id: str, tenant_id: str) -> str:
     return result["access_token"]
 
 
-def send_mail(token: str, recipient: str, subject: str, body: str) -> None:
-    payload = {
-        "message": {
-            "subject": subject,
-            "body": {"contentType": "HTML", "content": to_html(body)},
-            "toRecipients": [{"emailAddress": {"address": recipient}}],
-        },
-        "saveToSentItems": True,
+def send_mail(
+    token: str,
+    recipient: str,
+    subject: str,
+    body: str,
+    sender_name: str | None,
+    sender_address: str | None,
+) -> None:
+    message = {
+        "subject": subject,
+        "body": {"contentType": "HTML", "content": to_html(body)},
+        "toRecipients": [{"emailAddress": {"address": recipient}}],
     }
+    if sender_name and sender_address:
+        message["from"] = {
+            "emailAddress": {"name": sender_name, "address": sender_address}
+        }
+    payload = {"message": message, "saveToSentItems": True}
     r = requests.post(
         GRAPH_SENDMAIL,
         headers={
@@ -128,6 +137,8 @@ def main() -> int:
 
     client_id = os.environ.get("AZURE_CLIENT_ID")
     tenant_id = os.environ.get("AZURE_TENANT_ID", "common")
+    sender_name = os.environ.get("SENDER_NAME", "").strip() or None
+    sender_address = os.environ.get("SENDER_ADDRESS", "").strip() or None
 
     if not client_id:
         print("Fehler: AZURE_CLIENT_ID in .env setzen.", file=sys.stderr)
@@ -157,7 +168,7 @@ def main() -> int:
         subject = render(subject_tpl, contact["firmenname"])
         body = render(body_tpl, contact["firmenname"])
         try:
-            send_mail(token, contact["email"], subject, body)
+            send_mail(token, contact["email"], subject, body, sender_name, sender_address)
             sent += 1
             print(f"[{i}/{len(contacts)}] OK   -> {contact['firmenname']} <{contact['email']}>")
         except Exception as e:
