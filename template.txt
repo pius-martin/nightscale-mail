@@ -1,7 +1,5 @@
 Nightscale für {firmenname} – test
 
-Subject: 
-
 Sehr geehrtes {firmenname}-Team,
 
 mein Name ist Pius Martin, Mitgründer von Nightscale. Wir sind in Wien ansässig und helfen Gastronomie- und Hotelbetrieben mit AI-gestützten Entscheidungen dabei, Umsatz zu steigern, Personalkosten zu senken und im Tagesgeschäft genauer zu verstehen, was tatsächlich passiert – Auslastung, Marge, Personalbedarf und saisonale Muster an einem Ort statt verteilt über fünf Tools.
