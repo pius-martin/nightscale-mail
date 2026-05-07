@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Versendet Mails ueber Microsoft Graph API (kein SMTP, keine Admin-Rechte noetig)."""
 
+from __future__ import annotations
+
 import csv
 import html
 import json
