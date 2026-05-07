@@ -1,0 +1,10 @@
+Anfrage zur Zusammenarbeit mit {firmenname}
+
+Sehr geehrte Damen und Herren der {firmenname},
+
+hiermit melde ich mich bezüglich einer möglichen Zusammenarbeit.
+
+[Hier deinen Mailtext einfügen. Du kannst überall {firmenname} schreiben,
+und es wird automatisch durch den Firmennamen aus der CSV ersetzt.]
+
+Mit freundlichen Grüßen
