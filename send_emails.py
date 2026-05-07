@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Versendet vorgeschriebene Mails an eine Kontaktliste via Microsoft (SMTP)."""
+"""Versendet Mails ueber Microsoft Graph API (kein SMTP, keine Admin-Rechte noetig)."""
 
 import csv
+import json
 import os
-import smtplib
-import ssl
 import sys
 import time
-from email.message import EmailMessage
-from email.utils import formataddr
 from pathlib import Path
+
+import msal
+import requests
+
+
+GRAPH_SCOPE = ["https://graph.microsoft.com/Mail.Send"]
+GRAPH_SENDMAIL = "https://graph.microsoft.com/v1.0/me/sendMail"
+TOKEN_CACHE = Path(__file__).resolve().parent / ".token_cache.bin"
 
 
 def load_env(path: Path) -> None:
@@ -48,37 +53,76 @@ def render(text: str, firmenname: str) -> str:
     return text.replace("{firmenname}", firmenname)
 
 
-def build_message(
-    *,
-    sender_name: str,
-    sender_email: str,
-    recipient_email: str,
-    subject: str,
-    body: str,
-) -> EmailMessage:
-    msg = EmailMessage()
-    msg["From"] = formataddr((sender_name, sender_email))
-    msg["To"] = recipient_email
-    msg["Subject"] = subject
-    msg.set_content(body)
-    return msg
+def get_access_token(client_id: str, tenant_id: str) -> str:
+    cache = msal.SerializableTokenCache()
+    if TOKEN_CACHE.exists():
+        cache.deserialize(TOKEN_CACHE.read_text())
+
+    app = msal.PublicClientApplication(
+        client_id,
+        authority=f"https://login.microsoftonline.com/{tenant_id}",
+        token_cache=cache,
+    )
+
+    result = None
+    accounts = app.get_accounts()
+    if accounts:
+        result = app.acquire_token_silent(GRAPH_SCOPE, account=accounts[0])
+
+    if not result:
+        flow = app.initiate_device_flow(scopes=GRAPH_SCOPE)
+        if "user_code" not in flow:
+            raise RuntimeError(f"Device flow fehlgeschlagen: {json.dumps(flow, indent=2)}")
+        print("\n" + "=" * 60)
+        print(flow["message"])
+        print("=" * 60 + "\n")
+        result = app.acquire_token_by_device_flow(flow)
+
+    if "access_token" not in result:
+        raise RuntimeError(f"Login fehlgeschlagen: {result.get('error_description', result)}")
+
+    if cache.has_state_changed:
+        TOKEN_CACHE.write_text(cache.serialize())
+        try:
+            os.chmod(TOKEN_CACHE, 0o600)
+        except OSError:
+            pass
+
+    return result["access_token"]
+
+
+def send_mail(token: str, recipient: str, subject: str, body: str) -> None:
+    payload = {
+        "message": {
+            "subject": subject,
+            "body": {"contentType": "Text", "content": body},
+            "toRecipients": [{"emailAddress": {"address": recipient}}],
+        },
+        "saveToSentItems": True,
+    }
+    r = requests.post(
+        GRAPH_SENDMAIL,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=30,
+    )
+    if r.status_code >= 300:
+        raise RuntimeError(f"HTTP {r.status_code}: {r.text}")
 
 
 def main() -> int:
     root = Path(__file__).resolve().parent
     load_env(root / ".env")
 
-    sender_email = os.environ.get("SMTP_USER")
-    sender_password = os.environ.get("SMTP_PASSWORD")
-    sender_name = os.environ.get("SENDER_NAME", "").strip()
-    smtp_host = os.environ.get("SMTP_HOST", "smtp.office365.com")
-    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    client_id = os.environ.get("AZURE_CLIENT_ID")
+    tenant_id = os.environ.get("AZURE_TENANT_ID", "common")
 
-    if not sender_email or not sender_password:
-        print("Fehler: SMTP_USER und SMTP_PASSWORD in .env setzen.", file=sys.stderr)
-        return 1
-    if not sender_name:
-        print("Fehler: SENDER_NAME in .env setzen (dein angezeigter Name).", file=sys.stderr)
+    if not client_id:
+        print("Fehler: AZURE_CLIENT_ID in .env setzen.", file=sys.stderr)
+        print("Anleitung zum Anlegen der App-Registrierung: siehe Kommentar in .env.example", file=sys.stderr)
         return 1
 
     contacts_path = root / (sys.argv[1] if len(sys.argv) > 1 else "contacts.csv")
@@ -91,39 +135,26 @@ def main() -> int:
         print("Keine Kontakte gefunden.", file=sys.stderr)
         return 1
 
-    print(f"Sende {len(contacts)} Mail(s) als '{sender_name}' <{sender_email}>")
-    print(f"SMTP: {smtp_host}:{smtp_port}")
+    print(f"Sende {len(contacts)} Mail(s) ueber Microsoft Graph API")
     confirm = input("Weiter? [j/N] ").strip().lower()
     if confirm not in ("j", "ja", "y", "yes"):
         print("Abgebrochen.")
         return 0
 
-    context = ssl.create_default_context()
-    sent, failed = 0, 0
-    with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
-        server.ehlo()
-        server.starttls(context=context)
-        server.ehlo()
-        server.login(sender_email, sender_password)
+    token = get_access_token(client_id, tenant_id)
 
-        for i, contact in enumerate(contacts, 1):
-            subject = render(subject_tpl, contact["firmenname"])
-            body = render(body_tpl, contact["firmenname"])
-            msg = build_message(
-                sender_name=sender_name,
-                sender_email=sender_email,
-                recipient_email=contact["email"],
-                subject=subject,
-                body=body,
-            )
-            try:
-                server.send_message(msg)
-                sent += 1
-                print(f"[{i}/{len(contacts)}] OK   -> {contact['firmenname']} <{contact['email']}>")
-            except Exception as e:
-                failed += 1
-                print(f"[{i}/{len(contacts)}] FEHL -> {contact['email']}: {e}", file=sys.stderr)
-            time.sleep(1)
+    sent, failed = 0, 0
+    for i, contact in enumerate(contacts, 1):
+        subject = render(subject_tpl, contact["firmenname"])
+        body = render(body_tpl, contact["firmenname"])
+        try:
+            send_mail(token, contact["email"], subject, body)
+            sent += 1
+            print(f"[{i}/{len(contacts)}] OK   -> {contact['firmenname']} <{contact['email']}>")
+        except Exception as e:
+            failed += 1
+            print(f"[{i}/{len(contacts)}] FEHL -> {contact['email']}: {e}", file=sys.stderr)
+        time.sleep(1)
 
     print(f"\nFertig. Gesendet: {sent}, Fehlgeschlagen: {failed}")
     return 0 if failed == 0 else 2
