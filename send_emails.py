@@ -2,8 +2,10 @@
 """Versendet Mails ueber Microsoft Graph API (kein SMTP, keine Admin-Rechte noetig)."""
 
 import csv
+import html
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -53,6 +55,13 @@ def render(text: str, firmenname: str) -> str:
     return text.replace("{firmenname}", firmenname)
 
 
+def to_html(text: str) -> str:
+    escaped = html.escape(text)
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped, flags=re.DOTALL)
+    escaped = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", escaped, flags=re.DOTALL)
+    return escaped.replace("\n", "<br>\n")
+
+
 def get_access_token(client_id: str, tenant_id: str) -> str:
     cache = msal.SerializableTokenCache()
     if TOKEN_CACHE.exists():
@@ -95,7 +104,7 @@ def send_mail(token: str, recipient: str, subject: str, body: str) -> None:
     payload = {
         "message": {
             "subject": subject,
-            "body": {"contentType": "Text", "content": body},
+            "body": {"contentType": "HTML", "content": to_html(body)},
             "toRecipients": [{"emailAddress": {"address": recipient}}],
         },
         "saveToSentItems": True,
